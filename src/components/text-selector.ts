@@ -2,6 +2,7 @@ import { LitElement, html, css } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import type { TextContent } from '../types';
 import { Difficulty } from '../types';
+import { generateRandomText } from '../data/wordLists';
 
 @customElement('text-selector')
 export class TextSelector extends LitElement {
@@ -10,6 +11,9 @@ export class TextSelector extends LitElement {
   @property({ type: Number }) userLevel: number = 1;
 
   @state() private filter: 'all' | 'unlocked' | 'locked' | 'custom' = 'all';
+  @state() private wordCount: 25 | 50 | 100 = 50;
+  @state() private randomDifficulty: 'easy' | 'medium' | 'hard' | 'mixed' = 'mixed';
+  @state() private includePunctuation: boolean = false;
 
   static styles = css`
     :host {
@@ -175,6 +179,86 @@ export class TextSelector extends LitElement {
       color: var(--sub-color);
       font-size: 0.875rem;
     }
+
+    .random-section {
+      background: rgba(255, 255, 255, 0.03);
+      padding: 2rem;
+      border-radius: 8px;
+      margin-bottom: 2rem;
+    }
+
+    .random-header {
+      font-size: 1rem;
+      font-weight: 500;
+      color: var(--text-color);
+      margin-bottom: 1rem;
+    }
+
+    .random-options {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .option-group {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    .option-label {
+      font-size: 0.875rem;
+      color: var(--sub-color);
+    }
+
+    .option-btn {
+      padding: 0.5rem 1rem;
+      font-size: 0.875rem;
+      font-family: inherit;
+      border: 1px solid var(--sub-color);
+      background: none;
+      color: var(--sub-color);
+      cursor: pointer;
+      border-radius: 4px;
+      transition: all 0.2s;
+    }
+
+    .option-btn:hover {
+      color: var(--text-color);
+      border-color: var(--text-color);
+    }
+
+    .option-btn.active {
+      color: var(--bg-color);
+      background: var(--main-color);
+      border-color: var(--main-color);
+    }
+
+    .start-random-btn {
+      padding: 0.75rem 2rem;
+      font-size: 0.875rem;
+      font-family: inherit;
+      background: var(--main-color);
+      color: var(--bg-color);
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      font-weight: 500;
+    }
+
+    .start-random-btn:hover {
+      opacity: 0.9;
+    }
+
+    .divider {
+      height: 1px;
+      background: var(--sub-color);
+      opacity: 0.2;
+      margin: 2rem 0;
+    }
   `;
 
   private getDifficultyLabel(difficulty: Difficulty): string {
@@ -246,6 +330,33 @@ export class TextSelector extends LitElement {
     );
   }
 
+  private handleStartRandom() {
+    const content = generateRandomText(
+      this.wordCount,
+      this.randomDifficulty,
+      this.includePunctuation
+    );
+
+    const randomText: TextContent = {
+      id: `random-${Date.now()}`,
+      title: `Random - ${this.wordCount} words`,
+      content,
+      difficulty: this.randomDifficulty === 'easy' ? Difficulty.Easy :
+                  this.randomDifficulty === 'hard' ? Difficulty.Hard : Difficulty.Medium,
+      requiredLevel: 1,
+      category: 'custom',
+      wordCount: this.wordCount,
+    };
+
+    this.dispatchEvent(
+      new CustomEvent('text-selected', {
+        detail: randomText,
+        bubbles: true,
+        composed: true,
+      })
+    );
+  }
+
   private renderTextItem(text: TextContent) {
     const isLocked = !this.isTextUnlocked(text.id);
     const isCustom = text.category === 'custom';
@@ -254,6 +365,7 @@ export class TextSelector extends LitElement {
       <div
         class="text-item ${isLocked ? 'locked' : ''}"
         @click=${() => this.handleTextClick(text)}
+        title=${isLocked ? `Requires level ${text.requiredLevel} (you are level ${this.userLevel})` : ''}
       >
         <div class="text-item-left">
           <div class="text-icon">${isLocked ? '🔒' : isCustom ? '📝' : '📖'}</div>
@@ -261,6 +373,7 @@ export class TextSelector extends LitElement {
             <div class="text-title">${text.title}</div>
             <div class="text-meta">
               ${text.author ? `${text.author} · ` : ''}${text.wordCount} words
+              ${isLocked ? html` · <span style="color: var(--error-color)">requires level ${text.requiredLevel}</span>` : ''}
             </div>
           </div>
         </div>
@@ -268,7 +381,7 @@ export class TextSelector extends LitElement {
           <div class="badge difficulty-badge">
             ${this.getDifficultyLabel(text.difficulty)}
           </div>
-          ${!isCustom ? html`
+          ${!isCustom && !isLocked ? html`
             <div class="badge">level ${text.requiredLevel}</div>
           ` : ''}
         </div>
@@ -282,8 +395,71 @@ export class TextSelector extends LitElement {
     return html`
       <div class="header">
         <h1>dr.type</h1>
-        <p>minimal typing trainer</p>
+        <p>complete texts to level up and unlock more content</p>
       </div>
+
+      <div class="random-section">
+        <div class="random-header">random text</div>
+        <div class="random-options">
+          <div class="option-group">
+            <span class="option-label">words:</span>
+            <button
+              class="option-btn ${this.wordCount === 25 ? 'active' : ''}"
+              @click=${() => (this.wordCount = 25)}
+            >
+              25
+            </button>
+            <button
+              class="option-btn ${this.wordCount === 50 ? 'active' : ''}"
+              @click=${() => (this.wordCount = 50)}
+            >
+              50
+            </button>
+            <button
+              class="option-btn ${this.wordCount === 100 ? 'active' : ''}"
+              @click=${() => (this.wordCount = 100)}
+            >
+              100
+            </button>
+          </div>
+
+          <div class="option-group">
+            <span class="option-label">difficulty:</span>
+            <button
+              class="option-btn ${this.randomDifficulty === 'easy' ? 'active' : ''}"
+              @click=${() => (this.randomDifficulty = 'easy')}
+            >
+              easy
+            </button>
+            <button
+              class="option-btn ${this.randomDifficulty === 'mixed' ? 'active' : ''}"
+              @click=${() => (this.randomDifficulty = 'mixed')}
+            >
+              mixed
+            </button>
+            <button
+              class="option-btn ${this.randomDifficulty === 'hard' ? 'active' : ''}"
+              @click=${() => (this.randomDifficulty = 'hard')}
+            >
+              hard
+            </button>
+          </div>
+
+          <div class="option-group">
+            <button
+              class="option-btn ${this.includePunctuation ? 'active' : ''}"
+              @click=${() => (this.includePunctuation = !this.includePunctuation)}
+            >
+              punctuation
+            </button>
+          </div>
+        </div>
+        <button class="start-random-btn" @click=${this.handleStartRandom}>
+          start typing
+        </button>
+      </div>
+
+      <div class="divider"></div>
 
       <div class="controls">
         <div class="filters">

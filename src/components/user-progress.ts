@@ -97,6 +97,13 @@ export class UserProgressComponent extends LitElement {
       color: var(--sub-color);
       margin-top: 0.25rem;
     }
+
+    .help-text {
+      font-size: 0.75rem;
+      color: var(--sub-color);
+      font-style: italic;
+      opacity: 0.8;
+    }
   `;
 
   private handleExport() {
@@ -129,10 +136,12 @@ export class UserProgressComponent extends LitElement {
               <div class="progress-bar-fill" style="width: ${progressToNext.percentage}%"></div>
             </div>
             <div class="progress-label">
-              ${progressToNext.completedTexts} / ${progressToNext.requiredTexts} to level ${progressToNext.nextLevel}
+              complete ${progressToNext.requiredTexts - progressToNext.completedTexts} more texts to unlock level ${progressToNext.nextLevel}
             </div>
           </div>
-        ` : ''}
+        ` : html`
+          <div class="help-text">max level reached - all texts unlocked!</div>
+        `}
 
         <div class="stats">
           <div class="stat">
