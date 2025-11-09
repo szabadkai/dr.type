@@ -98,7 +98,7 @@ export class ThemeSelector extends LitElement {
               class="theme-option ${this.currentTheme === themeName ? 'active' : ''}"
               @click=${() => this.selectTheme(themeName)}
             >
-              ${themeName}
+              ${themes[themeName].name}
             </button>
           `)}
         </div>
