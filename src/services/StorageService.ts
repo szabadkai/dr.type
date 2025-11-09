@@ -1,4 +1,10 @@
-import type { UserProgress, TypingSession, TextContent } from '../types';
+import type {
+  UserProgress,
+  TypingSession,
+  TextContent,
+  ReadingBookProgress,
+  ReadingLibrary,
+} from '../types';
 
 /**
  * Service for managing Local Storage operations
@@ -6,6 +12,7 @@ import type { UserProgress, TypingSession, TextContent } from '../types';
 class StorageService {
   private readonly PROGRESS_KEY = 'drtype_user_progress';
   private readonly CUSTOM_TEXTS_KEY = 'drtype_custom_texts';
+  private readonly READING_LIBRARY_KEY = 'drtype_reading_library';
 
   /**
    * Get user progress from Local Storage
@@ -225,6 +232,75 @@ class StorageService {
       console.error('Error importing data:', error);
       return false;
     }
+  }
+
+  /**
+   * Get reading library (books + active selection)
+   */
+  getReadingLibrary(): ReadingLibrary {
+    try {
+      const data = localStorage.getItem(this.READING_LIBRARY_KEY);
+      if (!data) {
+        return { activeBookId: null, books: {} };
+      }
+      const parsed = JSON.parse(data);
+      return {
+        activeBookId: parsed.activeBookId ?? null,
+        books: parsed.books ?? {},
+      };
+    } catch (error) {
+      console.error('Error loading reading library:', error);
+      return { activeBookId: null, books: {} };
+    }
+  }
+
+  private saveReadingLibrary(library: ReadingLibrary): void {
+    try {
+      localStorage.setItem(this.READING_LIBRARY_KEY, JSON.stringify(library));
+    } catch (error) {
+      console.error('Error saving reading library:', error);
+    }
+  }
+
+  getReadingBook(bookId: string): ReadingBookProgress | null {
+    const library = this.getReadingLibrary();
+    return library.books[bookId] ?? null;
+  }
+
+  saveReadingBook(book: ReadingBookProgress): ReadingLibrary {
+    const library = this.getReadingLibrary();
+    library.books[book.id] = book;
+    if (!library.activeBookId) {
+      library.activeBookId = book.id;
+    }
+    this.saveReadingLibrary(library);
+    return library;
+  }
+
+  deleteReadingBook(bookId: string): ReadingLibrary {
+    const library = this.getReadingLibrary();
+    delete library.books[bookId];
+    if (library.activeBookId === bookId) {
+      library.activeBookId = Object.keys(library.books)[0] ?? null;
+    }
+    this.saveReadingLibrary(library);
+    return library;
+  }
+
+  setActiveReadingBook(bookId: string | null): void {
+    const library = this.getReadingLibrary();
+    if (bookId && !library.books[bookId]) {
+      console.warn('Attempted to set unknown reading book as active');
+      return;
+    }
+    library.activeBookId = bookId;
+    this.saveReadingLibrary(library);
+  }
+
+  getActiveReadingBook(): ReadingBookProgress | null {
+    const library = this.getReadingLibrary();
+    if (!library.activeBookId) return null;
+    return library.books[library.activeBookId] ?? null;
   }
 }
 

@@ -1,6 +1,7 @@
 import type { TextContent } from '../types';
 import { Difficulty } from '../types';
 import { classicLiterature } from '../data/literature';
+import { touchTypingGauntlet } from '../data/touchTypingGauntlet';
 import { storageService } from './StorageService';
 
 /**
@@ -19,6 +20,11 @@ class TextManager {
   private loadTexts(): void {
     // Load classic literature
     classicLiterature.forEach(text => {
+      this.allTexts.set(text.id, text);
+    });
+
+    // Load touch typing gauntlet drills
+    touchTypingGauntlet.forEach(text => {
       this.allTexts.set(text.id, text);
     });
 

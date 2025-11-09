@@ -1,4 +1,5 @@
 import { LitElement, html, css } from 'lit';
+import type { PropertyValues } from 'lit';
 import { customElement, property, state } from 'lit/decorators.js';
 import type { CharError, TypingState, TextContent, TypingSession } from '../types';
 import { StatsCalculator } from '../services/StatsCalculator';
@@ -27,6 +28,7 @@ export class TypingArea extends LitElement {
   private updateInterval?: number;
   private wpmHistory: Array<{ time: number; wpm: number; raw: number }> = [];
   private chart?: Chart;
+  private progressEventSent: boolean = false;
 
   static styles = css`
     :host {
@@ -52,6 +54,13 @@ export class TypingArea extends LitElement {
     .text-info .author {
       font-size: 0.875rem;
       opacity: 0.7;
+    }
+
+    .finger-note {
+      margin-top: 0.5rem;
+      font-size: 0.875rem;
+      color: var(--main-color);
+      line-height: 1.4;
     }
 
     .stats-bar {
@@ -175,6 +184,30 @@ export class TypingArea extends LitElement {
       gap: 1rem;
     }
 
+    .top-bar {
+      display: flex;
+      justify-content: flex-start;
+      margin-bottom: 1.5rem;
+    }
+
+    .back-btn {
+      border: 1px solid var(--sub-color);
+      color: var(--sub-color);
+      border-radius: 4px;
+      padding: 0.4rem 0.9rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .back-btn:hover {
+      border-color: var(--text-color);
+      color: var(--text-color);
+    }
+
     button {
       padding: 0.75rem 1.5rem;
       font-size: 0.875rem;
@@ -225,6 +258,15 @@ export class TypingArea extends LitElement {
     }
   }
 
+  protected updated(changedProps: PropertyValues<this>) {
+    if (changedProps.has('textData')) {
+      const previous = changedProps.get('textData') as TextContent | undefined;
+      if (!previous || previous.id !== this.textData?.id) {
+        this.reset();
+      }
+    }
+  }
+
   private handleKeyDown = (e: KeyboardEvent) => {
     if (!this.textData || this.typingState.isComplete) return;
 
@@ -266,6 +308,8 @@ export class TypingArea extends LitElement {
 
     this.userInput += char;
     this.typingState.currentIndex++;
+
+    this.emitProgressEvent();
 
     if (this.typingState.currentIndex >= this.textData.content.length) {
       this.completeTyping();
@@ -377,6 +421,26 @@ export class TypingArea extends LitElement {
     this.requestUpdate();
   }
 
+  private emitProgressEvent() {
+    if (!this.textData || this.progressEventSent) return;
+    const progress = this.typingState.currentIndex / this.textData.content.length;
+    if (progress < 0.8) return;
+
+    this.progressEventSent = true;
+    this.dispatchEvent(
+      new CustomEvent('typing-progress', {
+        detail: {
+          progress,
+          currentIndex: this.typingState.currentIndex,
+          total: this.textData.content.length,
+          textId: this.textData.id,
+        },
+        bubbles: true,
+        composed: true,
+      })
+    );
+  }
+
   private reset() {
     this.typingState = {
       currentIndex: 0,
@@ -391,6 +455,7 @@ export class TypingArea extends LitElement {
     this.liveWpm = 0;
     this.liveAccuracy = 100;
     this.wpmHistory = [];
+    this.progressEventSent = false;
 
     if (this.updateInterval) {
       clearInterval(this.updateInterval);
@@ -439,6 +504,7 @@ export class TypingArea extends LitElement {
     setTimeout(() => this.createChart(), 0);
 
     return html`
+      ${this.renderBackControl()}
       <div class="completion">
         <div class="graph-container">
           <canvas id="wpm-chart"></canvas>
@@ -469,12 +535,26 @@ export class TypingArea extends LitElement {
           ` : html`
             <button class="primary" @click=${this.reset}>try again</button>
           `}
-          <button @click=${() => this.dispatchEvent(new CustomEvent('back-to-menu', { bubbles: true, composed: true }))}>
+          <button @click=${this.goBackToMenu}>
             change text
           </button>
         </div>
       </div>
     `;
+  }
+
+  private renderBackControl() {
+    return html`
+      <div class="top-bar">
+        <button class="back-btn" @click=${this.goBackToMenu}>
+          &larr; back to menu
+        </button>
+      </div>
+    `;
+  }
+
+  private goBackToMenu() {
+    this.dispatchEvent(new CustomEvent('back-to-menu', { bubbles: true, composed: true }));
   }
 
   private createChart() {
@@ -615,7 +695,10 @@ export class TypingArea extends LitElement {
 
   render() {
     if (!this.textData) {
-      return html`<div>no text selected</div>`;
+      return html`
+        ${this.renderBackControl()}
+        <div>no text selected</div>
+      `;
     }
 
     if (this.typingState.isComplete) {
@@ -627,9 +710,11 @@ export class TypingArea extends LitElement {
     let charIndex = 0;
 
     return html`
+      ${this.renderBackControl()}
       <div class="text-info">
         <h2>${this.textData.title}</h2>
         ${this.textData.author ? html`<div class="author">${this.textData.author}</div>` : ''}
+        ${this.textData.fingerNote ? html`<div class="finger-note">${this.textData.fingerNote}</div>` : ''}
       </div>
 
       <div class="stats-bar">

@@ -11,8 +11,9 @@ import './typing-area';
 import './text-selector';
 import './user-progress';
 import './theme-selector';
+import './reading-mode';
 
-type AppView = 'menu' | 'typing' | 'upload';
+type AppView = 'menu' | 'typing' | 'upload' | 'reading';
 
 @customElement('dr-type-app')
 export class DrTypeApp extends LitElement {
@@ -277,8 +278,17 @@ export class DrTypeApp extends LitElement {
     this.currentView = 'upload';
   }
 
+  private handleStartReadingMode() {
+    this.currentView = 'reading';
+  }
+
   private handleCancelUpload() {
     this.currentView = 'menu';
+  }
+
+  private handleExitReadingMode() {
+    this.currentView = 'menu';
+    this.loadUserProgress();
   }
 
   private handleFileSelect(e: Event) {
@@ -358,6 +368,7 @@ export class DrTypeApp extends LitElement {
         .userLevel=${this.userProgress.level}
         @text-selected=${this.handleTextSelected}
         @upload-text=${this.handleUploadText}
+        @start-reading-mode=${this.handleStartReadingMode}
       ></text-selector>
     `;
   }
@@ -457,6 +468,12 @@ export class DrTypeApp extends LitElement {
     `;
   }
 
+  private renderReadingMode() {
+    return html`
+      <reading-mode @exit-reading-mode=${this.handleExitReadingMode}></reading-mode>
+    `;
+  }
+
   private renderLevelUpModal() {
     const levelConfig = levelProgressionService.getLevelConfig(this.newLevel);
 
@@ -478,6 +495,7 @@ export class DrTypeApp extends LitElement {
         ${this.currentView === 'menu' ? this.renderMenu() : ''}
         ${this.currentView === 'typing' ? this.renderTyping() : ''}
         ${this.currentView === 'upload' ? this.renderUpload() : ''}
+        ${this.currentView === 'reading' ? this.renderReadingMode() : ''}
         ${this.showLevelUpModal ? this.renderLevelUpModal() : ''}
       </div>
       <theme-selector></theme-selector>

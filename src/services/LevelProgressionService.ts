@@ -98,7 +98,11 @@ class LevelProgressionService {
     const customTexts = textManager.getCustomTexts();
     unlockedIds.push(...customTexts.map(text => text.id));
 
-    return unlockedIds;
+    // Add all training drills (always unlocked)
+    const trainingTexts = textManager.getAllTexts().filter(text => text.category === 'training');
+    unlockedIds.push(...trainingTexts.map(text => text.id));
+
+    return Array.from(new Set(unlockedIds));
   }
 
   /**
@@ -114,11 +118,19 @@ class LevelProgressionService {
    * Returns true if user leveled up
    */
   updateProgress(session: TypingSession): boolean {
+    if (session.mode === 'reading') {
+      return false;
+    }
+
     const progress = storageService.getUserProgress();
     if (!progress) return false;
 
     // Get unique completed text IDs
-    const completedTextIds = new Set(progress.sessions.map(s => s.textId));
+    const completedTextIds = new Set(
+      progress.sessions
+        .filter(s => s.mode !== 'reading')
+        .map(s => s.textId)
+    );
     completedTextIds.add(session.textId);
 
     // Calculate new level
@@ -148,7 +160,11 @@ class LevelProgressionService {
     percentage: number;
   } {
     const currentLevel = progress.level;
-    const completedTextIds = new Set(progress.sessions.map(s => s.textId));
+    const completedTextIds = new Set(
+      progress.sessions
+        .filter(s => s.mode !== 'reading')
+        .map(s => s.textId)
+    );
     const completedCount = completedTextIds.size;
 
     const nextLevelConfig = this.levelConfigs.find(
