@@ -340,27 +340,13 @@ export class DrTypeApp extends LitElement {
     this.currentView = 'menu';
   }
 
-  private handleExportData() {
-    const exportData = storageService.exportData();
-    const blob = new Blob([exportData], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `drtype-backup-${new Date().toISOString()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
   private renderMenu() {
     if (!this.userProgress) return html`<div>loading...</div>`;
 
     const allTexts = textManager.getAllTexts();
 
     return html`
-      <user-progress
-        .progress=${this.userProgress}
-        @export-data=${this.handleExportData}
-      ></user-progress>
+      <user-progress .progress=${this.userProgress}></user-progress>
 
       <text-selector
         .texts=${allTexts}

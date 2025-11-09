@@ -530,6 +530,14 @@ export class TextSelector extends LitElement {
 
   private handleOpenGauntlet() {
     this.filter = 'training';
+    this.scrollToTextList();
+  }
+
+  private scrollToTextList() {
+    const list = this.shadowRoot?.querySelector('.text-list');
+    if (list) {
+      list.scrollIntoView({ behavior: 'smooth' });
+    }
   }
 
   private handleShuffleRandom() {

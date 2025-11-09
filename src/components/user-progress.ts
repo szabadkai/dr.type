@@ -51,28 +51,6 @@ export class UserProgressComponent extends LitElement {
       margin-right: 0.25rem;
     }
 
-    .actions {
-      display: flex;
-      gap: 0.5rem;
-    }
-
-    button {
-      padding: 0.5rem 1rem;
-      font-size: 0.75rem;
-      font-family: inherit;
-      border: none;
-      background: none;
-      color: var(--sub-color);
-      cursor: pointer;
-      border-radius: 4px;
-      transition: all 0.2s;
-    }
-
-    button:hover {
-      color: var(--text-color);
-      background: rgba(255, 255, 255, 0.05);
-    }
-
     .progress-bar {
       flex: 1;
       min-width: 200px;
@@ -105,15 +83,6 @@ export class UserProgressComponent extends LitElement {
       opacity: 0.8;
     }
   `;
-
-  private handleExport() {
-    this.dispatchEvent(
-      new CustomEvent('export-data', {
-        bubbles: true,
-        composed: true,
-      })
-    );
-  }
 
   render() {
     if (!this.progress) {
@@ -156,10 +125,6 @@ export class UserProgressComponent extends LitElement {
             <span class="stat-value">${this.progress.stats.totalSessions}</span>
             <span>tests</span>
           </div>
-        </div>
-
-        <div class="actions">
-          <button @click=${this.handleExport} title="Export data">💾</button>
         </div>
       </div>
     `;
