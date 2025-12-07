@@ -279,11 +279,15 @@ export class TypingArea extends LitElement {
     }
 
     const char = e.key;
-    if (char.length > 1 && char !== 'Backspace') return;
+    const isSpaceKey = char === ' ' || char === 'Spacebar' || e.code === 'Space';
+
+    if (!isSpaceKey && char.length > 1 && char !== 'Backspace') return;
 
     e.preventDefault();
 
-    if (char === 'Backspace') {
+    if (isSpaceKey) {
+      this.handleSpaceJump();
+    } else if (char === 'Backspace') {
       this.handleBackspace();
     } else {
       this.handleCharacter(char);
@@ -308,6 +312,49 @@ export class TypingArea extends LitElement {
 
     this.userInput += char;
     this.typingState.currentIndex++;
+
+    this.emitProgressEvent();
+
+    if (this.typingState.currentIndex >= this.textData.content.length) {
+      this.completeTyping();
+    }
+
+    this.requestUpdate();
+  }
+
+  private handleSpaceJump() {
+    if (!this.textData) return;
+
+    const expectedChar = this.textData.content[this.typingState.currentIndex];
+
+    // If we are currently on whitespace, handle normally
+    if (/\s/.test(expectedChar)) {
+      this.handleCharacter(expectedChar);
+      return;
+    }
+
+    // Find the next whitespace (or end of text)
+    let jumpIndex = this.textData.content.length;
+    for (let i = this.typingState.currentIndex; i < this.textData.content.length; i++) {
+      if (/\s/.test(this.textData.content[i])) {
+        jumpIndex = i + 1;
+        break;
+      }
+    }
+
+    const skippedSegment = this.textData.content.slice(this.typingState.currentIndex, jumpIndex);
+    const timestamp = Date.now();
+
+    const newErrors = skippedSegment.split('').map((expected, offset) => ({
+      charIndex: this.typingState.currentIndex + offset,
+      expected,
+      typed: '_',
+      timestamp,
+    }));
+
+    this.typingState.errors = [...this.typingState.errors, ...newErrors];
+    this.typingState.currentIndex = jumpIndex;
+    this.userInput = this.userInput.padEnd(jumpIndex, '_');
 
     this.emitProgressEvent();
 
